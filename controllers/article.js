@@ -2,6 +2,7 @@
 
 var validator = require('validator');
 var fs = require('fs');
+var path = require('path');
 var Article = require('../models/article');
 
 var controller = {
@@ -261,7 +262,52 @@ var controller = {
     }, // end upload file
 
     getImage: (req, res) => {
-        
+        var file = req.params.image;
+        var path_file ='./upload/articles/'+file;
+        fs.exists(path_file, (exists) => {
+            console.log(path_file);
+            console.log(exists);
+            if(exists){
+                return res.sendFile(path.resolve(path_file));
+            } else {
+                return res.status(200).send({
+                    status: 'Error',
+                    message: 'La imagen no existe'
+                });
+            }
+        });
+    },
+    search: (req, res) => {
+        // Sacar el string a buscar
+        var searchString = req.params.search;
+        console.log(searchString);
+        Article.find({
+            "$or": [
+                { "title": { "$regex": searchString, "$options": "i" } },
+                { "content": { "$regex": searchString, "$options": "i" } }
+            ]
+        }).sort([['date', 'descending']])
+        .exec((err, articles) => {
+            console.log(articles);
+            if (err) {
+                return res.status(500).send({
+                    status: 'error',
+                    message: 'Error en la petición'
+                });
+            }
+
+            if (!articles || articles.length == 0) {
+                return res.status(404).send({
+                    status: 'error',
+                    message: 'No hay articulos encontrados'
+                });
+            }
+
+            return res.status(200).send({
+                status: 'success',
+                articles
+            });
+        });
     }
 }; // end controller
 
